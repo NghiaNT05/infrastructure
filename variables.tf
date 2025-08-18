@@ -1,7 +1,7 @@
 variable "aws_region" {
   type =string
   description = "EC2 aws_region"
-  default = "us-east-1"
+  default = "ap-southeast-1"
 }
 variable "db_instance_class" {
   type        = string
