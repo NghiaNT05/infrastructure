@@ -1,10 +1,19 @@
-
-data "aws_ami" "amazon_linux" {
+data "aws_ami" "amazon_linux_2023" {
   most_recent = true
 
   filter {
     name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+    values = ["al2023-ami-*-x86_64"]
+  }
+
+  filter {
+    name   = "architecture"
+    values = ["x86_64"]
+  }
+
+  filter {
+    name   = "root-device-type"
+    values = ["ebs"]
   }
 
   filter {
@@ -12,8 +21,9 @@ data "aws_ami" "amazon_linux" {
     values = ["hvm"]
   }
 
-  owners = ["137112412989"] # Amazon's official owner ID
+  owners = ["137112412989"] # Amazon
 }
+
 resource "aws_vpc" "main" {
   cidr_block = "10.0.0.0/16"
 }
@@ -85,11 +95,11 @@ resource "aws_security_group" "private_sg" {
   protocol        = "tcp"
   cidr_blocks     = ["10.0.2.0/24", "10.0.3.0/24"]
 }
-
-  ingress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
+  ingress{
+    from_port = 3200
+    to_port = 3200
+    protocol = "tcp"
+    security_groups = [aws_security_group.frontend_sg.id]
   }
 
   egress {
@@ -113,8 +123,15 @@ resource "aws_key_pair" "my_key" {
 }
 resource "aws_security_group" "frontend_sg" {
   name        = "frontend-sg"
-  description = "Allow HTTP/HTTPS"
+  description = "Allow HTTP/HTTPS, SSH from bastion"
   vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.bastion_sg.id]
+  }
 
   ingress {
     from_port   = 80
@@ -132,7 +149,7 @@ resource "aws_security_group" "frontend_sg" {
 }
 
 resource "aws_instance" "bastion" {
-  ami                         = data.aws_ami.amazon_linux.id# Amazon Linux 2, ap-southeast-1
+  ami                         = data.aws_ami.amazon_linux_2023.id# Amazon Linux 2, ap-southeast-1
   instance_type               = var.instance_type
   subnet_id                   = aws_subnet.public_subnet.id
   vpc_security_group_ids      = [aws_security_group.bastion_sg.id]
@@ -143,7 +160,7 @@ resource "aws_instance" "bastion" {
   }
 }
 resource "aws_instance" "private_zone" {
-  ami           = data.aws_ami.amazon_linux.id
+  ami           = data.aws_ami.amazon_linux_2023.id
   instance_type = var.instance_type
   subnet_id              = aws_subnet.private_subnet.id
   vpc_security_group_ids = [aws_security_group.private_sg.id]
@@ -153,7 +170,7 @@ resource "aws_instance" "private_zone" {
   }
 }
 resource "aws_instance" "frontend" {
-  ami                    = data.aws_ami.amazon_linux.id
+  ami                    = data.aws_ami.amazon_linux_2023.id
   instance_type          = var.instance_type
   subnet_id              = aws_subnet.public_subnet.id
   vpc_security_group_ids = [aws_security_group.frontend_sg.id] # hoặc tạo 1 SG riêng nếu cần

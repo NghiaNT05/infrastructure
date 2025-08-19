@@ -8,3 +8,6 @@ output "private_instance_private_ip" {
 output "rds_endpoint" {
   value = aws_db_instance.mydb.endpoint
 }
+output "frontend_private_ip" {
+  value = aws_instance.frontend.private_ip
+}
